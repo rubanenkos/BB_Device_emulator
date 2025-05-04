@@ -7,9 +7,7 @@ from configparser import ConfigParser
 config = ConfigParser()
 config.read("config.ini")
 
-BACKEND_URL = 'http://127.0.0.1:5000/create-transport-sensor'
-
-transport_id = int(config["TRANSPORT"]["transport_id"])
+BACKEND_URL = config.get("TRANSPORT", "backend_url", fallback="http://127.0.0.1:5000")
 
 BLOOD_COMPONENTS = {
     "Plasma": {"temp_min": -30, "temp_max": -15},
@@ -50,8 +48,7 @@ def generate_temperature(temp_min, temp_max, anomaly_chance=0):
     return round(random.uniform(temp_min, temp_max), 2)
 
 
-def send_temperature(running, update_ui, update_indicator, fridge_active, anomaly_chances):
-    """Эмулирует отправку данных о температуре и времени для каждого холодильника."""
+def send_temperature(running, update_ui, update_indicator, fridge_active, anomaly_chances, transport_id):
     while running():
         for fridge, active_var, anomaly_chance_var in zip(FRIDGES, fridge_active, anomaly_chances):
             if not running():
@@ -88,7 +85,7 @@ def send_temperature(running, update_ui, update_indicator, fridge_active, anomal
 
             try:
                 print("Data send:", payload)
-                response = requests.post(BACKEND_URL, json=payload)
+                response = requests.post(f"{BACKEND_URL}/create-transport-sensor", json=payload)
                 if response.status_code == 201:
                     update_ui(fridge["id"], temperature, "Data send successfully.")
                     update_indicator(fridge["id"], status == "normal")
@@ -98,3 +95,4 @@ def send_temperature(running, update_ui, update_indicator, fridge_active, anomal
                 update_ui(fridge["id"], "-", f"Error: {e}")
 
             time.sleep(fridge["interval"])
+

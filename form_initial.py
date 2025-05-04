@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 import configparser
+import tkinter.messagebox
+from utils import center_window
 
 
 class InitialForm:
@@ -22,8 +24,14 @@ class InitialForm:
         for i in range(1, 4):
             self.add_fridge_fields(i)
 
-        submit_button = ttk.Button(self.frame, text="Submit", command=self.submit_data)
+        style = ttk.Style()
+        style.configure("Green.TButton", font=("Helvetica", 12, "bold"), foreground="green")
+
+        submit_button = ttk.Button(self.frame, text="Submit", command=self.submit_data, style="Green.TButton")
         submit_button.grid(column=0, row=len(self.fridges) * 2 + 1, columnspan=2, pady=10)
+
+        root.update_idletasks()
+        center_window(root)
 
     def add_fridge_fields(self, fridge_number):
         ttk.Label(self.frame, text=f"Fridge {fridge_number} ID:").grid(column=0, row=(fridge_number - 1) * 2 + 1, padx=5, pady=5, sticky=tk.W)
@@ -41,8 +49,19 @@ class InitialForm:
         })
 
     def submit_data(self):
+        transport_id = self.transport_id.get().strip()
+
+        if not transport_id:
+            config = configparser.ConfigParser()
+            config.read("config.ini")
+            transport_id = config.get("TRANSPORT", "transport_id", fallback="").strip()
+
+        if not transport_id:
+            tkinter.messagebox.showerror("Error", "Please, set the Blood Transport ID.")
+            return
+
         data = {
-            "transport_id": self.transport_id.get(),
+            "transport_id": transport_id,
             "fridges": []
         }
 

@@ -4,12 +4,14 @@ from PIL import Image, ImageTk
 import threading
 from logic import send_temperature
 import os
+from utils import center_window
 
 
 class TemperatureEmulatorApp:
-    def __init__(self, root, data):
+    def __init__(self, root, data, on_back):
         self.root = root
         self.data = data
+        self.on_back = on_back
         self.root.title("Temperature Emulator")
         self.root.geometry("415x430")
         self.root.resizable(False, False)
@@ -26,7 +28,6 @@ class TemperatureEmulatorApp:
         self.app_icon = self.load_image("temperature.png")
 
         root.iconphoto(False, self.app_icon)
-
 
         for i in range(3):
             panel = ttk.LabelFrame(self.main_frame, text=f"Fridge {i + 1}", padding="15")
@@ -70,27 +71,34 @@ class TemperatureEmulatorApp:
             style = ttk.Style()
             style.configure("Green.TButton", font=("Helvetica", 12, "bold"), foreground="green")
             style.configure("Red.TButton", font=("Helvetica", 12, "bold"), foreground="red")
+            style.configure("Blue.TButton", font=("Helvetica", 12, "bold"), foreground="blue", background="#f0f0f0")
 
             self.buttons_frame = ttk.Frame(self.main_frame, padding="10")
-            self.buttons_frame.grid(column=0, row=3, pady=10, sticky=(tk.W, tk.E))
+            self.buttons_frame.grid(column=0, row=3, pady=5, sticky=(tk.W, tk.E))
 
             self.buttons_frame.grid_columnconfigure(0, weight=1)
             self.buttons_frame.grid_columnconfigure(1, weight=1)
+            self.buttons_frame.grid_columnconfigure(2, weight=1)
 
             self.start_button = ttk.Button(self.buttons_frame, text="START", command=self.start_emulation,
                                            style="Green.TButton")
-            self.start_button.grid(column=0, row=0, padx=5, sticky="ew")
+            self.start_button.grid(column=0, row=0, padx=5, pady=5, sticky="ew")
 
             self.stop_button = ttk.Button(self.buttons_frame, text="STOP", command=self.stop_emulation,
                                           style="Red.TButton")
-            self.stop_button.grid(column=1, row=0, padx=5, sticky="ew")
+            self.stop_button.grid(column=1, row=0, padx=5, pady=5, sticky="ew")
 
-        self.status_label = ttk.Label(self.main_frame, text="Information", relief="sunken", anchor=tk.W)
+            self.back_button = ttk.Button(self.buttons_frame, text="BACK", command=self.go_back, style="Blue.TButton")
+            self.back_button.grid(column=2, row=0, padx=5, pady=5, sticky="ew")
+
+        self.status_label = ttk.Label(self.main_frame, text="", relief="sunken", anchor=tk.W)
         self.status_label.grid(column=0, row=4, sticky=(tk.W, tk.E), pady=5)
 
         self.running = False
         self.thread = None
 
+        root.update_idletasks()
+        center_window(root)
 
     def update_panel_data(self, idx, active_var):
         panel = self.panels[idx]["panel"]
@@ -138,8 +146,14 @@ class TemperatureEmulatorApp:
             self.running = True
             self.thread = threading.Thread(
                 target=send_temperature,
-                args=(lambda: self.running, self.update_ui_text_data, self.update_fridge_indicator, self.fridge_active,
-                      [panel["percentage_var"] for panel in self.panels]),
+                args=(
+                    lambda: self.running,
+                    self.update_ui_text_data,
+                    self.update_fridge_indicator,
+                    self.fridge_active,
+                    [panel["percentage_var"] for panel in self.panels],
+                    self.data["transport_id"],
+                ),
                 daemon=True
             )
             self.thread.start()
@@ -150,3 +164,6 @@ class TemperatureEmulatorApp:
             self.running = False
             self.thread.join()
             self.status_label.config(text="Emulation stopped.")
+
+    def go_back(self):
+        self.on_back()
